@@ -1,4 +1,4 @@
-﻿/* Copyright 2010-2011 10gen Inc.
+/* Copyright 2010-2011 10gen Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -125,7 +125,6 @@ namespace MongoDB.Driver.GridFS {
                     message = string.Format("Invalid FileMode {0}.", mode);
                     throw new ArgumentException(message, "mode");
             }
-            gridFS.EnsureIndexes();
         }
         #endregion
 
@@ -491,11 +490,15 @@ namespace MongoDB.Driver.GridFS {
         }
 
         private void OpenAppend() {
+            gridFS.EnsureIndexes();
+
             length = fileInfo.Length;
             position = fileInfo.Length;
         }
 
         private void OpenCreate() {
+			gridFS.EnsureIndexes();
+			
             if (fileInfo.Id == null) {
                 fileInfo.SetId(ObjectId.GenerateNewId());
             }
@@ -522,6 +525,8 @@ namespace MongoDB.Driver.GridFS {
         }
 
         private void OpenTruncate() {
+            gridFS.EnsureIndexes();
+            
             // existing chunks will be overwritten as needed and extra chunks will be removed on Close
             length = 0;
             position = 0;

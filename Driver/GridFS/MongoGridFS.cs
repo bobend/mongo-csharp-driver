@@ -270,7 +270,6 @@ namespace MongoDB.Driver.GridFS {
             MongoGridFSFileInfo fileInfo
         ) {
             using (database.RequestStart(database.Settings.SlaveOk)) {
-                EnsureIndexes();
 
                 string md5Client;
                 using (var md5Algorithm = MD5.Create()) {
@@ -330,7 +329,6 @@ namespace MongoDB.Driver.GridFS {
             string remoteFileName,
             int version
         ) {
-            EnsureIndexes();
             Download(stream, Query.EQ("filename", remoteFileName), version);
         }
 
@@ -437,23 +435,12 @@ namespace MongoDB.Driver.GridFS {
         /// Ensures that the proper indexes for GridFS exist.
         /// </summary>
         /// <param name="maxFiles">Only create new indexes if there are fewer than this number of GridFS files).</param>
-        public void EnsureIndexes(
-            int maxFiles
-        ) {
-            // don't try to create indexes on secondaries
-            var requestConnection = database.Server.RequestConnection;
-            if (requestConnection != null) {
-                // check whether the actual server instance we are using is a primary
-                var serverInstance = requestConnection.ServerInstance;
-                if (!serverInstance.IsPrimary) {
-                    return;
-                }
-            } else {
-                // check whether we are guaranteed to use a primary
-                if (database.Settings.SlaveOk) {
-                    return;
-                }
-            }
+        public void EnsureIndexes(int maxFiles)
+        {
+            // EnsureIndexes should only be called for update operations
+            // read-only operations shouldn't call EnsureIndexes because:
+            // 1. we might be reading from a secondary
+            // 2. we might be authenticating as a read-only uaser
 
             // avoid round trip to count files if possible
             var indexCache = database.Server.IndexCache;
@@ -499,7 +486,6 @@ namespace MongoDB.Driver.GridFS {
         public bool Exists(
             string remoteFileName
         ) {
-            EnsureIndexes();
             return Exists(Query.EQ("filename", remoteFileName));
         }
 
@@ -534,7 +520,6 @@ namespace MongoDB.Driver.GridFS {
         public MongoCursor<MongoGridFSFileInfo> Find(
             string remoteFileName
         ) {
-            EnsureIndexes();
             return Find(Query.EQ("filename", remoteFileName));
         }
 
@@ -604,7 +589,6 @@ namespace MongoDB.Driver.GridFS {
             string remoteFileName,
             int version
         ) {
-            EnsureIndexes();
             return FindOne(Query.EQ("filename", remoteFileName), version);
         }
 

@@ -441,7 +441,6 @@ namespace MongoDB.Driver.GridFS {
             if (id != null) {
                 cursor = gridFS.Files.Find(Query.EQ("_id", id));
             } else {
-                gridFS.EnsureIndexes();
                 cursor = gridFS.Files.Find(Query.EQ("filename", name)).SetSortOrder(SortBy.Descending("uploadDate"));
             }
             var fileInfo = cursor.SetLimit(1).FirstOrDefault();
