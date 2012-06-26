@@ -232,7 +232,8 @@ namespace MongoDB.Driver {
                         connectionPool.Clear();
                     }
                 } finally {
-                    ReleaseConnection(connection);
+                    //ReleaseConnection(connection);
+                    connectionPool.ReleaseConnection(connection);
                 }
             }
         }
@@ -248,15 +249,18 @@ namespace MongoDB.Driver {
                     var message = string.Format("Server instance {0} is no longer connected.", address);
                     throw new InvalidOperationException(message);
                 }
-                connection = connectionPool.AcquireConnection(database);
+                //connection = connectionPool.AcquireConnection(database);
             }
+
+            connection = connectionPool.AcquireConnection(database);
 
             // check authentication outside the lock because it might involve a round trip to the server
             try {
                 connection.CheckAuthentication(database); // will authenticate if necessary
             } catch (MongoAuthenticationException) {
                 // don't let the connection go to waste just because authentication failed
-                ReleaseConnection(connection); // ReleaseConnection will reacquire the lock
+                //ReleaseConnection(connection); // ReleaseConnection will reacquire the lock
+                connectionPool.ReleaseConnection(connection);
                 throw;
             }
 
@@ -320,9 +324,9 @@ namespace MongoDB.Driver {
         internal void ReleaseConnection(
             MongoConnection connection
         ) {
-            lock (serverInstanceLock) {
+            //lock (serverInstanceLock) {
                 connectionPool.ReleaseConnection(connection);
-            }
+            //}
         }
 
         internal void SetState(

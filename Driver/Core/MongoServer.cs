@@ -1035,28 +1035,43 @@ namespace MongoDB.Driver {
         internal MongoConnection AcquireConnection(
             MongoDatabase database,
             bool slaveOk
-        ) {
-            lock (serverLock) {
+        )
+        {
+            MongoConnection requestConnection = null;
+            lock (serverLock)
+            {
                 // if a thread has called RequestStart it wants all operations to take place on the same connection
                 int threadId = Thread.CurrentThread.ManagedThreadId;
                 Request request;
-                if (requests.TryGetValue(threadId, out request)) {
-                    if (!slaveOk && request.SlaveOk) {
-                        throw new InvalidOperationException("A call to AcquireConnection with slaveOk false is not allowed when the current RequestStart was made with slaveOk true.");
+                if (requests.TryGetValue(threadId, out request))
+                {
+                    if (!slaveOk && request.SlaveOk)
+                    {
+                        throw new InvalidOperationException(
+                            "A call to AcquireConnection with slaveOk false is not allowed when the current RequestStart was made with slaveOk true.");
                     }
-                    request.Connection.CheckAuthentication(database); // will throw exception if authentication fails
-                    return request.Connection;
+                    //request.Connection.CheckAuthentication(database); // will throw exception if authentication fails
+                    //return request.Connection;
+                    requestConnection = request.Connection;
                 }
-
-                var serverInstance = ChooseServerInstance(slaveOk);
-                return serverInstance.AcquireConnection(database);
             }
+            // check authentication outside of lock
+            if (requestConnection != null)
+            {
+                requestConnection.CheckAuthentication(database); // will throw exception if authentication fails
+                return requestConnection;
+            }
+
+            var serverInstance = ChooseServerInstance(slaveOk);
+
+            return serverInstance.AcquireConnection(database);
         }
 
         internal MongoConnection AcquireConnection(
             MongoDatabase database,
             MongoServerInstance serverInstance
         ) {
+            MongoConnection requestConnection = null;
             lock (serverLock) {
                 // if a thread has called RequestStart it wants all operations to take place on the same connection
                 int threadId = Thread.CurrentThread.ManagedThreadId;
@@ -1070,12 +1085,28 @@ namespace MongoDB.Driver {
                         );
                         throw new MongoConnectionException(message);
                     }
-                    request.Connection.CheckAuthentication(database); // will throw exception if authentication fails
-                    return request.Connection;
+                    //request.Connection.CheckAuthentication(database); // will throw exception if authentication fails
+                    //return request.Connection;
+                    requestConnection = request.Connection;
                 }
 
-                return serverInstance.AcquireConnection(database);
-            }
+                //return serverInstance.AcquireConnection(database);
+                // check authentication outside of lock
+
+                 if (requestConnection != null)
+
+                 {
+
+                     requestConnection.CheckAuthentication(database); // will throw exception if authentication fails
+
+                     return requestConnection;
+	
+                 }
+
+
+
+                 return serverInstance.AcquireConnection(database);
+                }
         }
 
         internal void AddInstance(
@@ -1156,8 +1187,9 @@ namespace MongoDB.Driver {
                     return; // hold on to the connection until RequestDone is called
                 }
 
-                connection.ServerInstance.ReleaseConnection(connection);
+                //connection.ServerInstance.ReleaseConnection(connection);
             }
+            connection.ServerInstance.ReleaseConnection(connection);
         }
 
         internal void RemoveInstance(
