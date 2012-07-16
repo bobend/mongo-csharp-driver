@@ -1069,6 +1069,21 @@ namespace MongoDB.Bson {
         }
 
         /// <summary>
+        /// Hotfix from https://jira.mongodb.org/browse/CSHARP-415
+        /// </summary>
+        /// <param name="document"></param>
+        /// <returns></returns>
+        public Dictionary<string, object> ToDictionary(BsonDocument document)
+        {
+            var dictionary = new Dictionary<string, object>(document.ElementCount);
+            foreach (var element in document.Elements)
+            {
+                dictionary.Add(element.Name, ToDictionaryHelper(element.Value));
+            }
+            return dictionary;
+        }
+
+        /// <summary>
         /// Converts the BsonDocument to a Hashtable.
         /// </summary>
         /// <returns>A hashtable.</returns>
@@ -1186,21 +1201,55 @@ namespace MongoDB.Bson {
             }
         }
 
+        /// <summary>
+        /// Hotfix from https://jira.mongodb.org/browse/CSHARP-415
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
         private object ToDictionaryHelper(
             BsonValue value
         ) {
-            switch (value.BsonType) {
+            switch (value.BsonType)
+            {
                 case BsonType.Array:
-                    var array = new object[value.AsBsonArray.Count];
-                    value.AsBsonArray.CopyTo(array, 0);
-                    return array;
+                    return ToArrayHelper(value.AsBsonArray);
 
                 case BsonType.Document:
                     return value.AsBsonDocument.ToDictionary();
 
+                case BsonType.DateTime:
+                    return value.AsDateTime;
+
                 default:
                     return value.RawValue;
+            } 
+        }
+
+        /// <summary>
+        /// Hotfix from https://jira.mongodb.org/browse/CSHARP-415
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        private object ToArrayHelper(BsonArray value)
+        {
+            var casted = value.AsBsonArray;
+            var array = new object[value.AsBsonArray.Count];
+            for (int i = 0; i < array.Length; ++i)
+            {
+                if (casted[i].IsBsonDocument)
+                {
+                    array[i] = ToDictionary(casted[i] as BsonDocument);
+                }
+                else if (casted[i].IsBsonArray)
+                {
+                    array[i] = ToArrayHelper(casted[i].AsBsonArray);
+                }
+                else
+                {
+                    array[i] = casted[i].RawValue;
+                }
             }
+            return array;
         }
 
         private object ToHashtableHelper(
