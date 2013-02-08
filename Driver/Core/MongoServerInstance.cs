@@ -197,11 +197,13 @@ namespace MongoDB.Driver {
         /// </summary>
         public void Ping() {
             var connection = connectionPool.AcquireConnection(null);
-            try {
-                var pingCommand = new CommandDocument("ping", 1);
-                connection.RunCommand("admin.$cmd", QueryFlags.SlaveOk, pingCommand);
-            } finally {
-                connectionPool.ReleaseConnection(connection);
+            try
+            {
+                Ping(connection);
+            }
+            finally
+            {
+                connection.Close();
             }
         }
 
@@ -321,12 +323,15 @@ namespace MongoDB.Driver {
             }
         }
 
+        internal void Ping(MongoConnection connection)
+        {
+            var pingCommand = new CommandDocument("ping", 1);
+            connection.RunCommand("admin", QueryFlags.SlaveOk, pingCommand, true);
+        }
         internal void ReleaseConnection(
             MongoConnection connection
         ) {
-            //lock (serverInstanceLock) {
                 connectionPool.ReleaseConnection(connection);
-            //}
         }
 
         internal void SetState(
@@ -366,7 +371,11 @@ namespace MongoDB.Driver {
             try {
                 try {
                     var isMasterCommand = new CommandDocument("ismaster", 1);
-                    isMasterResult = connection.RunCommand("admin.$cmd", QueryFlags.SlaveOk, isMasterCommand);
+                	isMasterResult = connection.RunCommand("admin", QueryFlags.SlaveOk, isMasterCommand, false);
+					if (!isMasterResult.Ok)
+	                {
+    	                throw new MongoCommandException(isMasterResult);
+	                }
                 } catch (MongoCommandException ex) {
                     isMasterResult = ex.CommandResult;
                     throw;
@@ -385,7 +394,7 @@ namespace MongoDB.Driver {
                 MongoServerBuildInfo buildInfo;
                 try {
                     var buildInfoCommand = new CommandDocument("buildinfo", 1);
-                    var buildInfoResult = connection.RunCommand("admin.$cmd", QueryFlags.SlaveOk, buildInfoCommand);
+                	var buildInfoResult = connection.RunCommand("admin", QueryFlags.SlaveOk, buildInfoCommand, false);
                     buildInfo = new MongoServerBuildInfo(
                         buildInfoResult.Response["bits"].ToInt32(), // bits
                         buildInfoResult.Response["gitVersion"].AsString, // gitVersion

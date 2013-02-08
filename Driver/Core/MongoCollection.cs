@@ -1061,13 +1061,13 @@ namespace MongoDB.Driver {
 
                         if (message.MessageLength > connection.ServerInstance.MaxMessageLength) {
                             byte[] lastDocument = message.RemoveLastDocument();
-                            var intermediateResult = connection.SendMessage(message, safeMode);
+                            var intermediateResult = connection.SendMessage(message, safeMode, database.Name);
                             if (safeMode.Enabled) { results.Add(intermediateResult); }
                             message.ResetBatch(lastDocument);
                         }
                     }
 
-                    var finalResult = connection.SendMessage(message, safeMode);
+                    var finalResult = connection.SendMessage(message, safeMode, database.Name);
                     if (safeMode.Enabled) { results.Add(finalResult); }
 
                     return results;
@@ -1219,7 +1219,7 @@ namespace MongoDB.Driver {
             try {
                 var writerSettings = GetWriterSettings(connection);
                 using (var message = new MongoDeleteMessage(writerSettings, FullName, flags, query)) {
-                    return connection.SendMessage(message, safeMode);
+                    return connection.SendMessage(message, safeMode ?? settings.SafeMode, database.Name);
                 }
             } finally {
                 server.ReleaseConnection(connection);
@@ -1427,7 +1427,8 @@ namespace MongoDB.Driver {
             try {
                 var writerSettings = GetWriterSettings(connection);
                 using (var message = new MongoUpdateMessage(writerSettings, FullName, options.CheckElementNames, options.Flags, query, update)) {
-                    return connection.SendMessage(message, options.SafeMode);
+                    var safeMode = options.SafeMode ?? settings.SafeMode;
+                    return connection.SendMessage(message, safeMode, database.Name);
                 }
             } finally {
                 server.ReleaseConnection(connection);

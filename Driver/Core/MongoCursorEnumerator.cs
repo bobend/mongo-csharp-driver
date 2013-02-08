@@ -259,7 +259,7 @@ namespace MongoDB.Driver {
             MongoRequestMessage message
         ) {
             var readerSettings = cursor.Collection.GetReaderSettings(connection);
-            connection.SendMessage(message, SafeMode.False); // safemode doesn't apply to queries
+            connection.SendMessage(message, SafeMode.False, cursor.Database.Name); // safemode doesn't apply to queries
             var reply = connection.ReceiveMessage<TDocument>(readerSettings, cursor.SerializationOptions);
             responseFlags = reply.ResponseFlags;
             openCursorId = reply.CursorId;
@@ -273,7 +273,7 @@ namespace MongoDB.Driver {
                         var connection = cursor.Server.AcquireConnection(cursor.Database, serverInstance);
                         try {
                             using (var message = new MongoKillCursorsMessage(openCursorId)) {
-                                connection.SendMessage(message, SafeMode.False); // no need to use SafeMode for KillCursors
+                                connection.SendMessage(message, SafeMode.False, cursor.Database.Name); // no need to use SafeMode for KillCursors
                             }
                         } finally {
                             cursor.Server.ReleaseConnection(connection);
