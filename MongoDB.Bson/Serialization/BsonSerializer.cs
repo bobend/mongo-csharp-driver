@@ -519,8 +519,9 @@ namespace MongoDB.Bson.Serialization
         /// Looks up a serializer for a Type.
         /// </summary>
         /// <param name="type">The Type.</param>
+        /// <param name="autoCreateIfNull">false = it will no register the type automatically, if it wasn't found.</param>
         /// <returns>A serializer for the Type.</returns>
-        public static IBsonSerializer LookupSerializer(Type type)
+        public static IBsonSerializer LookupSerializer(Type type, bool autoCreateIfNull = true)
         {
             // since we don't allow registering serializers for BsonDocument no lookup is needed
             if (type == typeof(BsonDocument))
@@ -532,7 +533,7 @@ namespace MongoDB.Bson.Serialization
             try
             {
                 IBsonSerializer serializer;
-                if (__serializers.TryGetValue(type, out serializer))
+                if (__serializers.TryGetValue(type, out serializer) || !autoCreateIfNull)
                 {
                     return serializer;
                 }
